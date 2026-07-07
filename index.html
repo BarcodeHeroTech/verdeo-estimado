@@ -69,8 +69,7 @@
   .banner.no { background:var(--panel); color:var(--ink-soft); }
   /* Fine print + footer */
   .fine { font-size:12.5px; color:var(--ink-soft); text-align:center; margin-top:16px; line-height:1.5; }
-  .foot { text-align:center; margin-top:18px; padding-top:14px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-soft); }
-  .powered { text-align:center; margin-top:10px; font-size:12px; color:var(--ink-soft); }
+  .powered { text-align:center; margin-top:18px; padding-top:14px; border-top:1px solid var(--line); font-size:12px; color:var(--ink-soft); }
   .powered b { color:var(--green); font-weight:800; letter-spacing:-.3px; }
   .center { text-align:center; padding:40px 10px; color:var(--ink-soft); }
 </style>
@@ -183,7 +182,6 @@ function render(e) {
     ${e.photo_url ? `<img class="photo" src="${esc(e.photo_url)}" alt="">` : ''}
     ${action}
     <div class="fine">${T.fine}</div>
-    <div class="foot">${esc(e.business)} · ${esc(e.business_phone)} · ${T.speak}</div>
     <div class="powered">${T.powered} <b>verdeo.</b> — ${T.poweredTag}</div>`;
 
   if (e.status === 'pendiente') wireActions();
