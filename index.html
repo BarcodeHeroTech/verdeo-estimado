@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Estimado — Verdeo</title>
+<style>
+  :root {
+    --green:#1f9d55; --green-dark:#157a40; --green-light:#e6f6ec;
+    --ink:#17251c; --ink-soft:#5c6b62; --line:#e4e9e5; --bg:#f7faf8;
+    --red:#b91c1c; --amber:#b45309;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(170deg,#fff 0%,var(--green-light) 100%);
+    color:var(--ink); min-height:100vh; padding:20px 16px 48px;
+    display:flex; justify-content:center;
+  }
+  .card {
+    width:100%; max-width:440px; background:#fff;
+    border:1px solid var(--line); border-radius:18px; padding:24px 20px;
+    box-shadow:0 10px 30px rgba(23,37,28,.08); height:fit-content;
+  }
+  .biz { font-size:24px; font-weight:800; letter-spacing:-.5px; }
+  .biz small { color:var(--ink-soft); font-weight:600; font-size:13px; display:block; margin-top:2px; }
+  .title { font-size:14px; font-weight:700; color:var(--green-dark); text-transform:uppercase; letter-spacing:.6px; margin:18px 0 4px; }
+  .cust { font-size:18px; font-weight:700; }
+  .date { font-size:13px; color:var(--ink-soft); margin-top:2px; }
+  table { width:100%; border-collapse:collapse; margin-top:14px; }
+  td { padding:9px 0; border-bottom:1px solid var(--line); font-size:14.5px; }
+  td.qty { color:var(--ink-soft); white-space:nowrap; padding-right:10px; }
+  td.amt { text-align:right; font-weight:700; white-space:nowrap; }
+  .note { font-size:14px; color:var(--ink-soft); margin-top:12px; line-height:1.45; }
+  .photo { width:100%; border-radius:12px; margin-top:14px; }
+  .total { display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:14px; border-top:2px solid var(--ink); }
+  .total b { font-size:16px; }
+  .total .n { font-size:26px; font-weight:800; color:var(--green-dark); }
+  .sig-label { font-size:13.5px; font-weight:700; margin:22px 0 6px; }
+  canvas { width:100%; height:150px; background:#fff; border:1.5px dashed #b8c6bd; border-radius:12px; touch-action:none; }
+  .clear { background:none; border:none; color:var(--ink-soft); font-size:13px; padding:6px 0; cursor:pointer; text-decoration:underline; }
+  .btn {
+    width:100%; border:none; border-radius:999px; padding:16px;
+    font-size:16px; font-weight:700; cursor:pointer; margin-top:14px;
+    background:var(--green); color:#fff; font-family:inherit;
+  }
+  .btn:disabled { opacity:.45; }
+  .reject { display:block; text-align:center; margin-top:14px; color:var(--ink-soft); font-size:14px; background:none; border:none; width:100%; cursor:pointer; text-decoration:underline; font-family:inherit; }
+  .banner { border-radius:14px; padding:18px; text-align:center; margin-top:18px; font-weight:700; }
+  .banner.ok { background:var(--green-light); color:var(--green-dark); }
+  .banner.no { background:#f1f3f2; color:var(--ink-soft); }
+  .foot { text-align:center; margin-top:22px; font-size:12.5px; color:var(--ink-soft); }
+  .foot b { color:var(--green-dark); }
+  .center { text-align:center; padding:40px 10px; color:var(--ink-soft); }
+</style>
+</head>
+<body>
+<div class="card" id="app"><div class="center">…</div></div>
+<script>
+const SUPABASE_URL = 'https://bpfuqfaykfloeagpiywd.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwZnVxZmF5a2Zsb2VhZ3BpeXdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzNDI2ODIsImV4cCI6MjA5ODkxODY4Mn0.9o90PJseYPfd8lTPdvtQUlEvkPfVK1qqGXOgbo5xAUc';
+
+const ES = navigator.language.toLowerCase().startsWith('es');
+const T = ES ? {
+  estimate:'Estimado', for_:'Para', notFound:'Este estimado no está disponible.',
+  total:'Total', sign:'Firme aquí para aceptar', clear:'Limpiar firma',
+  accept:'Aceptar estimado', reject:'No, gracias',
+  accepted:'✓ Estimado aceptado. ¡Gracias! Nos pondremos en contacto.',
+  rejected:'Estimado rechazado. Gracias por su tiempo.',
+  already:'Este estimado ya fue respondido.', powered:'Hecho con',
+  confirmReject:'¿Seguro que desea rechazar este estimado?', error:'Ocurrió un error. Intente de nuevo.',
+} : {
+  estimate:'Estimate', for_:'For', notFound:'This estimate is not available.',
+  total:'Total', sign:'Sign here to accept', clear:'Clear signature',
+  accept:'Accept estimate', reject:'No, thank you',
+  accepted:'✓ Estimate accepted. Thank you! We will be in touch.',
+  rejected:'Estimate declined. Thanks for your time.',
+  already:'This estimate has already been answered.', powered:'Made with',
+  confirmReject:'Are you sure you want to decline this estimate?', error:'Something went wrong. Please try again.',
+};
+
+const token = new URLSearchParams(location.search).get('t');
+const app = document.getElementById('app');
+let hasInk = false;
+
+async function rpc(fn, body) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(await r.text());
+  const text = await r.text();
+  return text ? JSON.parse(text) : null;
+}
+
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = (n) => '$' + Number(n).toLocaleString();
+
+function fmtDate(iso) {
+  const [y,m,d] = iso.split('-').map(Number);
+  return new Date(y, m-1, d).toLocaleDateString(ES ? 'es-US' : 'en-US', { day:'numeric', month:'long', year:'numeric' });
+}
+
+function render(e) {
+  const items = (e.items || []).filter((i) => i.desc);
+  const rows = items.map((i) =>
+    `<tr><td>${esc(i.desc)}</td><td class="qty">${i.qty > 1 ? i.qty + ' × ' + money(i.price) : ''}</td><td class="amt">${money(i.qty * i.price)}</td></tr>`
+  ).join('');
+
+  let action = '';
+  if (e.status === 'pendiente') {
+    action = `
+      <div class="sig-label">✍️ ${T.sign}</div>
+      <canvas id="pad"></canvas>
+      <button class="clear" id="clear">${T.clear}</button>
+      <button class="btn" id="accept" disabled>${T.accept}</button>
+      <button class="reject" id="reject">${T.reject}</button>`;
+  } else if (e.status === 'aceptado') {
+    action = `<div class="banner ok">${T.accepted}</div>`;
+  } else {
+    action = `<div class="banner no">${T.rejected}</div>`;
+  }
+
+  app.innerHTML = `
+    <div class="biz">${esc(e.business)}<small>${esc(e.business_phone)}</small></div>
+    <div class="title">${T.estimate} · ${fmtDate(e.date)}</div>
+    <div class="cust">${T.for_}: ${esc(e.customer)}</div>
+    ${rows ? `<table>${rows}</table>` : ''}
+    ${e.description ? `<div class="note">${esc(e.description)}</div>` : ''}
+    ${e.photo_url ? `<img class="photo" src="${esc(e.photo_url)}" alt="">` : ''}
+    <div class="total"><b>${T.total}</b><span class="n">${money(e.amount)}</span></div>
+    ${action}
+    <div class="foot">${T.powered} <b>verdeo.</b></div>`;
+
+  if (e.status === 'pendiente') wireActions();
+}
+
+function wireActions() {
+  const pad = document.getElementById('pad');
+  const ctx = pad.getContext('2d');
+  const scale = window.devicePixelRatio || 1;
+  pad.width = pad.offsetWidth * scale;
+  pad.height = pad.offsetHeight * scale;
+  ctx.scale(scale, scale);
+  ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.strokeStyle = '#17251c';
+  let drawing = false;
+
+  const pos = (ev) => {
+    const r = pad.getBoundingClientRect();
+    return [ev.clientX - r.left, ev.clientY - r.top];
+  };
+  pad.addEventListener('pointerdown', (ev) => {
+    drawing = true; hasInk = true;
+    document.getElementById('accept').disabled = false;
+    const [x, y] = pos(ev); ctx.beginPath(); ctx.moveTo(x, y);
+    pad.setPointerCapture(ev.pointerId);
+  });
+  pad.addEventListener('pointermove', (ev) => {
+    if (!drawing) return;
+    const [x, y] = pos(ev); ctx.lineTo(x, y); ctx.stroke();
+  });
+  pad.addEventListener('pointerup', () => { drawing = false; });
+
+  document.getElementById('clear').onclick = () => {
+    ctx.clearRect(0, 0, pad.width, pad.height);
+    hasInk = false;
+    document.getElementById('accept').disabled = true;
+  };
+
+  document.getElementById('accept').onclick = async () => {
+    if (!hasInk) return;
+    document.getElementById('accept').disabled = true;
+    try {
+      await rpc('respond_estimate_public', { token, action: 'aceptado', sig: pad.toDataURL('image/png') });
+      load();
+    } catch { alert(T.error); document.getElementById('accept').disabled = false; }
+  };
+  document.getElementById('reject').onclick = async () => {
+    if (!confirm(T.confirmReject)) return;
+    try {
+      await rpc('respond_estimate_public', { token, action: 'rechazado' });
+      load();
+    } catch { alert(T.error); }
+  };
+}
+
+async function load() {
+  if (!token) { app.innerHTML = `<div class="center">${T.notFound}</div>`; return; }
+  try {
+    const e = await rpc('get_estimate_public', { token });
+    if (!e) { app.innerHTML = `<div class="center">${T.notFound}</div>`; return; }
+    render(e);
+  } catch { app.innerHTML = `<div class="center">${T.notFound}</div>`; }
+}
+load();
+</script>
+</body>
+</html>
