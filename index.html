@@ -22,12 +22,9 @@
     box-shadow:0 12px 34px rgba(23,37,28,.10); padding:34px 26px 26px; height:fit-content;
   }
   /* Letterhead */
-  .head { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; }
-  .brand { display:flex; align-items:center; gap:10px; }
-  .leaf { font-size:26px; }
+  .head { display:flex; justify-content:space-between; align-items:baseline; gap:14px; }
   .brand-name { font-size:21px; font-weight:800; letter-spacing:.5px; color:var(--green-deep); text-transform:uppercase; line-height:1.15; }
-  .contact { text-align:right; font-size:13px; color:var(--ink-soft); line-height:1.6; }
-  .contact b { color:var(--ink); font-size:13.5px; }
+  .contact { text-align:right; font-size:14px; color:var(--ink-soft); }
   hr { border:none; border-top:1px solid var(--line); margin:22px 0; }
   /* Title + meta */
   h1 { font-size:26px; font-weight:800; letter-spacing:5px; color:var(--green-deep); }
@@ -49,7 +46,7 @@
   .totalrow { display:flex; justify-content:flex-end; margin-top:16px; }
   .totalbox { min-width:230px; border-top:2px solid var(--ink); padding-top:12px; display:flex; justify-content:space-between; align-items:baseline; gap:18px; }
   .totalbox b { font-size:15px; letter-spacing:.5px; text-transform:uppercase; }
-  .totalbox .n { font-size:26px; font-weight:800; color:var(--green-dark); }
+  .totalbox .n { font-size:26px; font-weight:800; color:var(--green); }
   /* Notes + photo */
   .notes-k { font-size:11px; font-weight:700; letter-spacing:1.2px; color:var(--ink-soft); text-transform:uppercase; margin-top:26px; }
   .notes { font-size:14.5px; color:var(--ink); line-height:1.5; margin-top:6px; }
@@ -73,6 +70,8 @@
   /* Fine print + footer */
   .fine { font-size:12.5px; color:var(--ink-soft); text-align:center; margin-top:16px; line-height:1.5; }
   .foot { text-align:center; margin-top:18px; padding-top:14px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-soft); }
+  .powered { text-align:center; margin-top:10px; font-size:12px; color:var(--ink-soft); }
+  .powered b { color:var(--green); font-weight:800; letter-spacing:-.3px; }
   .center { text-align:center; padding:40px 10px; color:var(--ink-soft); }
 </style>
 </head>
@@ -87,7 +86,8 @@ const T = ES ? {
   estimate:'ESTIMADO', numLabel:'Estimado #', dateLabel:'Fecha', validLabel:'Válido hasta',
   preparedFor:'Preparado para', workDesc:'Descripción del trabajo', price:'Precio',
   total:'Total estimado', notes:'Notas', notFound:'Este estimado no está disponible.',
-  ready:'¿Listo para empezar? 🌿', signHint:'Firme abajo para aceptar este estimado',
+  ready:'¿Listo para empezar?', signHint:'Firme abajo para aceptar este estimado',
+  powered:'Hecho con', poweredTag:'la app para cuadrillas',
   clear:'Limpiar firma', accept:'Aceptar estimado', reject:'No, gracias',
   accepted:'✓ Estimado aceptado. ¡Gracias! Nos pondremos en contacto pronto.',
   rejected:'Estimado rechazado. Gracias por su tiempo.',
@@ -98,7 +98,8 @@ const T = ES ? {
   estimate:'ESTIMATE', numLabel:'Estimate #', dateLabel:'Date', validLabel:'Valid until',
   preparedFor:'Prepared for', workDesc:'Description of work', price:'Price',
   total:'Estimated total', notes:'Notes', notFound:'This estimate is not available.',
-  ready:'Ready to get started? 🌿', signHint:'Sign below to accept this estimate',
+  ready:'Ready to get started?', signHint:'Sign below to accept this estimate',
+  powered:'Made with', poweredTag:'the app for yard crews',
   clear:'Clear signature', accept:'Accept estimate', reject:'No, thank you',
   accepted:'✓ Estimate accepted. Thank you! We will be in touch soon.',
   rejected:'Estimate declined. Thanks for your time.',
@@ -146,7 +147,7 @@ function render(e) {
     action = `
       <div class="cta">
         <h2>${T.ready}</h2>
-        <p>✍️ ${T.signHint}</p>
+        <p>${T.signHint}</p>
         <canvas id="pad"></canvas>
         <button class="clear" id="clear">${T.clear}</button>
         <button class="btn" id="accept" disabled>${T.accept}</button>
@@ -160,8 +161,8 @@ function render(e) {
 
   app.innerHTML = `
     <div class="head">
-      <div class="brand"><span class="leaf">🌱</span><div class="brand-name">${esc(e.business)}</div></div>
-      <div class="contact"><b>${esc(e.business)}</b><br>${esc(e.business_phone)}</div>
+      <div class="brand-name">${esc(e.business)}</div>
+      <div class="contact">${esc(e.business_phone)}</div>
     </div>
     <hr>
     <h1>${T.estimate}</h1>
@@ -182,7 +183,8 @@ function render(e) {
     ${e.photo_url ? `<img class="photo" src="${esc(e.photo_url)}" alt="">` : ''}
     ${action}
     <div class="fine">${T.fine}</div>
-    <div class="foot">${esc(e.business)} · ${esc(e.business_phone)} · ${T.speak}</div>`;
+    <div class="foot">${esc(e.business)} · ${esc(e.business_phone)} · ${T.speak}</div>
+    <div class="powered">${T.powered} <b>verdeo.</b> — ${T.poweredTag}</div>`;
 
   if (e.status === 'pendiente') wireActions();
 }
